@@ -1,3 +1,4 @@
 {
-  "extends": "@strapi-community"
+  "extends": "@strapi-community",
+  "ignorePatterns": ["*.test.js"]
 }

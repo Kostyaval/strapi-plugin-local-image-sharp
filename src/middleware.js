@@ -1,21 +1,47 @@
 'use strict';
 
-const qs = require('qs');
-const { decode } = require('ufo');
+const { decode, parseURL, getQuery } = require('ufo');
 const { hash } = require('ohash');
 const { join } = require('path');
 const { createReadStream, existsSync } = require('fs');
 const { writeFile, readFile } = require('fs/promises');
 const getEtag = require('etag');
 
+function parseImageUrl(url) {
+  const result = {
+    id: '',
+    modifiers: null
+  }
+  const {pathname: path, search: queryString} = parseURL(url)
+
+  const pathParts = path.replace('uploads/', '').split('/')
+
+  result.id = pathParts.pop() // get last item of pathParts array (which always equal id) and remove it from pathParts
+
+  const pathModifier = pathParts.pop() // get path part before id (which always equal pathModifier)
+
+  if(pathModifier && pathModifier !== '_') {
+    result.modifiers = Object.create(null)
+    for (const p of pathModifier.split(',')) {
+      const [key, value = ''] = p.split('_');
+      result.modifiers[key] = decode(value);
+    }
+    return result
+  }
+  if(queryString) {
+    result.modifiers = getQuery(queryString)
+    return result
+  }
+
+  return result
+
+}
+
 function createMiddleware(ipx) {
   const config = strapi.config.get('plugin.local-image-sharp');
 
   return async function ipxMiddleware(ctx, next) {
-    const [url, query] = ctx.req.url.replace('/uploads', '').split('?');
-    const [firstSegment = '', ...idSegments] = url
-      .substr(1 /* leading slash */)
-      .split('/');
+
     const allowedTypes = [
       'JPEG',
       'PNG',
@@ -28,33 +54,13 @@ function createMiddleware(ipx) {
       'WEBP',
       'AVIF',
     ];
-    let id;
-    let modifiers;
 
-    let tempFilePath;
-    let tempTypePath;
-    let tempEtagPath;
-
-    // extract modifiers from query string
-    if (!idSegments.length && firstSegment) {
-      id = firstSegment;
-      modifiers = qs.parse(query);
-    } else {
-      // extract modifiers from url segments
-      id = decode(idSegments.join('/')); // decode is a shortend version of decodeURIComponent
-      modifiers = Object.create(null);
-      if (firstSegment !== '_') {
-        for (const p of firstSegment.split(',')) {
-          const [key, value = ''] = p.split('_');
-          modifiers[key] = decode(value);
-        }
-      }
-    }
+    const {id, modifiers} = parseImageUrl(ctx.req.url)
 
     // if no id or no modifiers or not allowed type, skip
     if (
       !id ||
-      !Object.keys(modifiers).length ||
+      !modifiers ||
       !allowedTypes.includes(id.split('.').pop().toUpperCase())
     ) {
       await next();
@@ -63,6 +69,9 @@ function createMiddleware(ipx) {
 
     const objectHash = hash({ id, modifiers });
 
+    let tempFilePath;
+    let tempTypePath;
+    let tempEtagPath;
     // If cache enabled, check if file exists
     if (config.cacheDir) {
       tempFilePath = join(config.cacheDir, `${objectHash}.raw`);
@@ -174,4 +183,5 @@ function createMiddleware(ipx) {
 
 module.exports = {
   createMiddleware,
+  parseImageUrl
 };
