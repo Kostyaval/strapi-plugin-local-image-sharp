@@ -37,6 +37,20 @@ function parseImageUrl(url) {
 
 }
 
+function applyPresets(modifiersFromUrl, presets = null) {
+  if(Object.keys(modifiersFromUrl).length === 0) return null
+  if(!presets) return modifiersFromUrl
+
+  let modifiers = {...modifiersFromUrl}
+
+  if(Object.prototype.hasOwnProperty.call(modifiers, 'preset')) {
+    const preset = presets[modifiers.preset] || {}
+    modifiers = Object.assign(modifiers, preset)
+    delete modifiers.preset
+  }
+  return modifiers
+}
+
 function createMiddleware(ipx) {
   const config = strapi.config.get('plugin.local-image-sharp');
 
@@ -55,7 +69,9 @@ function createMiddleware(ipx) {
       'AVIF',
     ];
 
-    const {id, modifiers} = parseImageUrl(ctx.req.url)
+    const {id, modifiers: modifiersFromUrl} = parseImageUrl(ctx.req.url)
+
+    const modifiers = applyPresets(modifiersFromUrl, config.presets)
 
     // if no id or no modifiers or not allowed type, skip
     if (
@@ -183,5 +199,6 @@ function createMiddleware(ipx) {
 
 module.exports = {
   createMiddleware,
-  parseImageUrl
+  parseImageUrl,
+  applyPresets,
 };
