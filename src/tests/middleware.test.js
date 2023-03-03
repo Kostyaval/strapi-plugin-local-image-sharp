@@ -1,4 +1,4 @@
-const { parseImageUrl, applyPresets} = require('../middleware');
+const { parseImageUrl, applyPresets, applyStrictMode} = require('../middleware');
 
 const presets = {
   mobile: {
@@ -116,4 +116,62 @@ describe('middleware extract modifiers test', () => {
 
   })
 
+
+  describe('parse url, apply presets in strict mode', () => {
+
+    it('In strict mode no one modifier should be apply', () => {
+      const url = '/uploads/width_2000/neutral_front_a_1_88f17a7dd7.jpg'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, true)
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual(null);
+    });
+
+    it('In strict mode no one modifier should be apply', () => {
+      const url = '/uploads/neutral_front_a_1_88f17a7dd7.jpg?format=webp&resize=200x200'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, true)
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual(null);
+    });
+
+    it('In strict mode, only the preset should be used as a modifier.', () => {
+      const url = '/uploads/neutral_front_a_1_88f17a7dd7.jpg?format=webp&resize=200x200&preset=desktop'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, true)
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual(presets.desktop);
+    });
+
+
+    it('In strict mode, only the preset should be used as a modifier.', () => {
+      const url = '/uploads/preset_square,width_2000/neutral_front_a_1_88f17a7dd7.jpg'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, true)
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual(presets.square);
+    });
+
+    it('In strict mode, with allowed modifiers only the preset and allowed modifiers should be used as a modifier.', () => {
+      const url = '/uploads/neutral_front_a_1_88f17a7dd7.jpg?resize=200x200&preset=desktop&format=webp'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, ['format'])
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual({...presets.desktop, format: 'webp'});
+    });
+
+    it('In strict mode, with allowed modifiers only the preset and allowed modifiers should be used as a modifier.', () => {
+      const url = '/uploads/width_2000,width_3000,format_webp,preset_mobile/neutral_front_a_1_88f17a7dd7.jpg?resize=200x200&preset=desktop&format=webp'
+      const {id, modifiers: modifiersFromUrl} = parseImageUrl(url)
+      applyStrictMode(modifiersFromUrl, ['format'])
+      const modifiersWithPreset = applyPresets(modifiersFromUrl, presets)
+      expect(id).toBe('neutral_front_a_1_88f17a7dd7.jpg');
+      expect(modifiersWithPreset).toEqual({...presets.mobile, format: 'webp'});
+    });
+  })
 });

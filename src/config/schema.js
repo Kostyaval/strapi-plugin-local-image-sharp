@@ -5,6 +5,9 @@ const yup = require('yup');
 const pluginConfigSchema = yup.object().shape({
   cacheDir: yup.string(),
   maxAge: yup.number().moreThan(0),
+  strict: yup.mixed().oneOf([true,false, yup.object().shape({
+    allowModifiers: yup.array().of(yup.string()).min(0)
+  })]),
   presets: yup.object().shape(
     yup.lazy((obj) => {
       const dynamicSchema = {};

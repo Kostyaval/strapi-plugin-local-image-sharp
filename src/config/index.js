@@ -6,6 +6,7 @@ module.exports = {
   default: ({ env }) => ({
     cacheDir: env('STRAPI_PLUGIN_LOCAL_IMAGE_SHARP_CACHE_DIR', ''),
     maxAge: 3600,
+    strict: false,
   }),
   validator(config) {
     pluginConfigSchema.validateSync(config);

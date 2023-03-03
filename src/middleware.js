@@ -51,6 +51,15 @@ function applyPresets(modifiersFromUrl, presets = null) {
   return modifiers
 }
 
+function applyStrictMode(modifiersFromUrl, strictRule) {
+  const allowedKeys = ['preset', ...(Array.isArray(strictRule) ? strictRule : []) ]
+  for (const key in modifiersFromUrl) {
+    if (!allowedKeys.includes(key)) {
+      delete modifiersFromUrl[key];
+    }
+  }
+}
+
 function createMiddleware(ipx) {
   const config = strapi.config.get('plugin.local-image-sharp');
 
@@ -70,6 +79,10 @@ function createMiddleware(ipx) {
     ];
 
     const {id, modifiers: modifiersFromUrl} = parseImageUrl(ctx.req.url)
+
+    if(config.strict) {
+      applyStrictMode(modifiersFromUrl)
+    }
 
     const modifiers = applyPresets(modifiersFromUrl, config.presets)
 
@@ -201,4 +214,5 @@ module.exports = {
   createMiddleware,
   parseImageUrl,
   applyPresets,
+  applyStrictMode,
 };
